@@ -34,27 +34,36 @@ int count_Delete=0;
 int Member( int value, struct  list_node_s* head_p );
 int Insert(int value, struct list_node_s** head_pp);
 int Delete (int value, struct list_node_s** head_pp);
-int PrintList( struct  list_node_s* head_p ); 
 void* Action(void* rank);
- 
- 
-/* Only executed by main thread */
-void Get_args(int argc, char* argv[]);
 void Usage(char* prog_name);
-double Serial_pi(long long n);
  
-/* Main function */
 int main(int argc, char* argv[])
 {
     int i=0;
-    long       thread;  /* Use long in case of a 64-bit system */
+    long       thread;  
     pthread_t* thread_handles;
     double start, finish, elapsed;
      
-    /* read command line arguments */
-    Get_args(argc, argv); 
+     if (argc != 7)
+    {
+        Usage(argv[0]);
+    }
+    thread_count = strtol(argv[1], NULL, 10);  
+    if (thread_count <= 0 || thread_count > MAX_THREADS)
+    {
+        Usage(argv[0]);
+    }
+    
+    n = (int) strtol(argv[2], (char **)NULL, 10);
+    m = (int) strtol(argv[3], (char **)NULL, 10);
+     
+    mMember = (float) atof(argv[4]);
+    mInsert = (float) atof(argv[5]);
+    mDelete = (float) atof(argv[6]);
+     
+   if (n <= 0 || m <= 0 || mMember + mInsert + mDelete!=1.0) Usage(argv[0]);
+
       
-    /* initially populating the link list */
     for(;i<n;i++)
     {   
         int r = rand()%65536;
@@ -64,11 +73,7 @@ int main(int argc, char* argv[])
         }
     }
      
-     
-    //printf("%f\n",mMember);
-    //printf("%f\n",mInsert);
-         
-     
+      
     thread_handles = (pthread_t*) malloc (thread_count*sizeof(pthread_t));  
      
     start = clock();
@@ -90,22 +95,10 @@ int main(int argc, char* argv[])
      
     printf("Elapsed time = %e seconds\n", elapsed);
      
-    //printf("%.10f,\n", elapsed);
-    //printf("Member operation count = %d\n",count_Member);
-    //printf("Insert operation count = %d\n",count_Insert);
-    //printf("Delete operation count = %d\n",count_Delete);
-    //PrintList(head);
     return 0;
-}/*main*/  
+} /*main*/  
  
-/*------------------------------------------------------------------
- * Function:       Action 
- * Purpose:        Compleetea the link list oparations by the thread running this 
- * In arg:         rank
- * Ret val:        ignored
- * Globals in:     n, thread_count, mMember, mInsert, mDelete
- * Global in/out:  count_Member, count_Insert, count_Delete 
- */
+
 void* Action(void* rank) 
 {
     long my_rank = (long) rank;
@@ -115,9 +108,7 @@ void* Action(void* rank)
     for( i=0; i < my_m; i++ )
     {
  
-        float prob = (rand()%10000/10000.0);
-        //printf("%f\n",prob);
-     
+        float prob = (rand()%10000/10000.0);     
      
         int r = rand()%65536;
         if(prob<mMember)
@@ -146,14 +137,7 @@ void* Action(void* rank)
    return NULL;
 }  /* Thread_sum */
  
-/*------------------------------------------------------------------
- * Function:       Member
- * Purpose:        Check if the given values is in the link list
- * In arg:         value, head_p
- * Globals in:     
- * Global in/out:   
- * Return val: Return 1 if value exist otherwise 0
- */
+
 int Member( int value, struct  list_node_s* head_p )
 {
     struct list_node_s* curr_p = head_p;
@@ -173,14 +157,7 @@ int Member( int value, struct  list_node_s* head_p )
     }
 }/* Member */
  
-/*------------------------------------------------------------------
- * Function:       Insert
- * Purpose:        Add new values in to link list
- * In arg:         value, head_p
- * Globals in:  
- * Global in/out:  
- * Return val: Return 1 if value successfully add to the list otherwise 0
- */
+
 int Insert(int value, struct list_node_s** head_pp)
 {
     struct list_node_s* curr_p = *head_pp;          
@@ -217,14 +194,6 @@ int Insert(int value, struct list_node_s** head_pp)
 }   /*Insert*/
  
  
-/*------------------------------------------------------------------
- * Function:       Delete
- * Purpose:        remove values from the link list 
- * In arg:         value, head_p
- * Globals in:     
- * Global in/out:  
- * Return val: Return 1 if value successfully remove from the list otherwise 0
- */
 int Delete (int value, struct list_node_s** head_pp)
 {
     struct list_node_s* curr_p = *head_pp;
@@ -258,66 +227,16 @@ int Delete (int value, struct list_node_s** head_pp)
 }   /*Delete*/
  
  
-/*------------------------------------------------------------------
- * Function:    Get_args
- * Purpose:     Get the command line args
- * In args:     argc, argv
- * Globals out: thread_count, n, m, mMember, mInsert, mDelete
- */
-void Get_args(int argc, char* argv[]) {
-    if (argc != 7)
-    {
-        Usage(argv[0]);
-    }
-    thread_count = strtol(argv[1], NULL, 10);  
-    if (thread_count <= 0 || thread_count > MAX_THREADS)
-    {
-        Usage(argv[0]);
-    }
-    
-    n = (int) strtol(argv[2], (char **)NULL, 10);
-    m = (int) strtol(argv[3], (char **)NULL, 10);
-     
-    mMember = (float) atof(argv[4]);
-    mInsert = (float) atof(argv[5]);
-    mDelete = (float) atof(argv[6]);
-     
-   if (n <= 0 || m <= 0 || mMember + mInsert + mDelete!=1.0) Usage(argv[0]);
-    
-}  /* Get_args */
+
  
-/*------------------------------------------------------------------
- * Function:  Usage
- * Purpose:   Print a message explaining how to run the program
- * In arg:    prog_name
- */
 void Usage(char* prog_name) {
    fprintf(stderr, "usage: %s <number of threads> <n> <m> <mMember> <mInsert> <mDelete>\n", prog_name);
-   fprintf(stderr,"n is the number of initial unique values in the Link List.\n");
-   fprintf(stderr,"m is number of random Member, Insert, and Delete operations on the link list.\n");
-   fprintf(stderr,"mMember is the fractions of operations of Member operation.\n");
-   fprintf(stderr,"mInsert is the fractions of operations of Insert operation.\n");
-   fprintf(stderr,"mDelete is the fractions of operations of Delete operation.\n");
+   fprintf(stderr,"n : Number of Unique Values.\n");
+   fprintf(stderr,"m : Total Number of Action.\n");
+   fprintf(stderr,"mMember : Fraction of Memeber Operations.\n");
+   fprintf(stderr,"mInsert : Fraction of Insert Operations.\n");
+   fprintf(stderr,"mDelete : Fraction of Delete Operations.\n");
               
    exit(0);
 }  /* Usage */
  
-/*------------------------------------------------------------------
- * Function:       PrintList
- * Purpose:        Add in the terms computed by the thread running this 
- * In arg:         value, head_p
- * Globals in:     
- * Global in/out:   
- * Return val: Estimate of pi using n terms of Maclaurin series
- */
-int PrintList( struct  list_node_s* head_p ) 
-{
-    struct list_node_s* curr_p = head_p;
-     
-    while(curr_p != NULL)
-    {
-        printf("%d ",curr_p->data);
-        curr_p = curr_p->next;
-    }
-    printf("\n");
-}
