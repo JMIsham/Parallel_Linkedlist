@@ -1,6 +1,6 @@
 /* Compile:  gcc -g -Wall -o parallel_linked_list_rw parallel_linked_list_rw.c -pthread
  *           
- * Run:      ./parallel_linked_list_rw n m mMember mInsert mDelete 
+ * Run:      ./parallel_linked_list_rw tCount n m mMember mInsert mDelete 
  * IndexNumber : 140236P  
  */   
  
@@ -30,6 +30,10 @@ float mDelete;
 int count_Member=0;
 int count_Insert=0;
 int count_Delete=0;
+int cMember ;
+int cInsert ;
+int cDelete ;
+
  
 int Member( int value, struct  list_node_s* head_p );
 int Insert(int value, struct list_node_s** head_pp);
@@ -60,7 +64,9 @@ int main(int argc, char* argv[])
     mMember = (float) atof(argv[4]);
     mInsert = (float) atof(argv[5]);
     mDelete = (float) atof(argv[6]);
-     
+    cMember = mMember*m;
+    cInsert = mInsert*m;
+    cDelete = mDelete*m;
    if (n <= 0 || m <= 0 || mMember + mInsert + mDelete!=1.0) Usage(argv[0]);
 
       
@@ -78,7 +84,8 @@ int main(int argc, char* argv[])
      
     start = clock();
     pthread_rwlock_init(&rwlock, NULL);
-     
+    
+
     for (thread = 0; thread < thread_count; thread++)  
     {
         pthread_create(&thread_handles[thread], NULL,Action , (void*)thread);  
@@ -111,26 +118,28 @@ void* Action(void* rank)
         float prob = (rand()%10000/10000.0);
      
         int r = rand()%65536;
-        if(prob < mMember)
+        if(prob < mMember && count_Member!=cMember)
         {
             pthread_rwlock_rdlock(&rwlock);
             Member(r,head);
             count_Member++;
             pthread_rwlock_unlock(&rwlock);
         }
-        else if(prob < mMember + mInsert )
+        else if(prob < mMember + mInsert && count_Insert!=cInsert)
         {
             pthread_rwlock_wrlock(&rwlock);
             Insert(r,&head);
             count_Insert++;
             pthread_rwlock_unlock(&rwlock);
         }
-        else
+        else if(prob <= mMember + mInsert + mDelete && count_Delete!=cDelete)
         {           
             pthread_rwlock_wrlock(&rwlock);
             Delete(r,&head);
             count_Delete++;
             pthread_rwlock_unlock(&rwlock);
+        }else{
+            i--;
         }
      
     }

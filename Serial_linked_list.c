@@ -1,6 +1,6 @@
-/* Compile:  gcc -g -Wall -o parallel_linked_list_mtx parallel_linked_list_mtx.c -pthread
+/* Compile:  gcc -g -Wall -o Serial_linked_list Serial_linked_list.c -pthread
  *           
- * Run:      ./parallel_linked_list_mtx tCount n m mMember mInsert mDelete 
+ * Run:      ./Serial_linked_list n m mMember mInsert mDelete 
  * IndexNumber : 140236P  
  */      
  
@@ -15,11 +15,7 @@ struct list_node_s
     int data;
     struct list_node_s* next;
 };
- 
-const int MAX_THREADS = 1024;
- 
-long thread_count;
-pthread_mutex_t mutex;
+
 struct list_node_s* head = NULL;    
  
 int n;
@@ -48,22 +44,17 @@ int main(int argc, char* argv[])
     pthread_t* thread_handles;
     double start, finish, elapsed;
      
-     if (argc != 7)
-    {
-        Usage(argv[0]);
-    }
-    thread_count = strtol(argv[1], NULL, 10);  
-    if (thread_count <= 0 || thread_count > MAX_THREADS)
+     if (argc != 6)
     {
         Usage(argv[0]);
     }
     
-    n = (int) strtol(argv[2], (char **)NULL, 10);
-    m = (int) strtol(argv[3], (char **)NULL, 10);
+    n = (int) strtol(argv[1], (char **)NULL, 10);
+    m = (int) strtol(argv[2], (char **)NULL, 10);
      
-    mMember = (float) atof(argv[4]);
-    mInsert = (float) atof(argv[5]);
-    mDelete = (float) atof(argv[6]);
+    mMember = (float) atof(argv[3]);
+    mInsert = (float) atof(argv[4]);
+    mDelete = (float) atof(argv[5]);
     cMember = mMember*m;
     cInsert = mInsert*m;
     cDelete = mDelete*m;
@@ -78,39 +69,8 @@ int main(int argc, char* argv[])
             i--;
         }
     }
-    printf("%d\n", count_Member);
-      
-    thread_handles = (pthread_t*) malloc (thread_count*sizeof(pthread_t));  
-     
-    start = clock();
-    pthread_mutex_init(&mutex, NULL);
-     
-    for (thread = 0; thread < thread_count; thread++)  
-    {
-        pthread_create(&thread_handles[thread], NULL,Action , (void*)thread);  
-    }
-     
-    for (thread = 0; thread < thread_count; thread++) 
-    {
-        pthread_join(thread_handles[thread], NULL); 
-    }
-     
-    pthread_mutex_destroy(&mutex);
-    finish = clock();
-    elapsed = (finish - start)/CLOCKS_PER_SEC;
-     
-    printf("Elapsed time = %e seconds\n %d", elapsed,count_Member);
-     
-    return 0;
-} /*main*/  
- 
-
-void* Action(void* rank) 
-{
-    long my_rank = (long) rank;
     double factor, my_sum = 0.0;
-    long long i;
-    long long my_m = m/thread_count;
+    long long my_m = m;
     for( i=0; i < my_m; i++ )
     {
  
@@ -119,33 +79,34 @@ void* Action(void* rank)
         int r = rand()%65536;
         if(prob<mMember && count_Member!=cMember )
         {
-            pthread_mutex_lock(&mutex);
             Member(r,head);
             count_Member++;
-            pthread_mutex_unlock(&mutex);
         }
         else if(prob < mMember + mInsert && count_Insert!=cInsert)
         {
-            pthread_mutex_lock(&mutex);
             Insert(r,&head);
             count_Insert++;
-            pthread_mutex_unlock(&mutex);
         }
         else if(prob <= mMember + mInsert + mDelete && count_Delete!=cDelete)
         {           
-            pthread_mutex_lock(&mutex);
             Delete(r,&head);
             count_Delete++;
-            pthread_mutex_unlock(&mutex);
         }else{
-        	i--;
+            i--;
         }   
 
     }  
+      
+    
+    finish = clock();
+    elapsed = (finish - start)/CLOCKS_PER_SEC;
+     
+    printf("Elapsed time = %e seconds\n", elapsed);
+     
+    return 0;
+} /*main*/  
  
-   return NULL;
-}  /* Thread_sum */
- 
+
 
 int Member( int value, struct  list_node_s* head_p )
 {
